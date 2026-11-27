@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucky Ticket — Admin Dashboard</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg: #07091a;
+  --bg2: #0c0f24;
+  --bg3: #111530;
+  --purple: #7c3aed;
+  --purple2: #8b5cf6;
+  --purple3: #a78bfa;
+  --gold: #f59e0b;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #475569;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --border: rgba(124,58,237,0.25);
+  --border2: rgba(255,255,255,0.08);
+  --radius: 12px;
+  --card: #0c0f24;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s}
+.main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .mobile-menu-btn{display:flex!important}
+}
+
+/* SIDEBAR */
+.sb-logo{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sb-logo-txt{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--purple2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sb-logo-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.sb-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.sb-section{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:16px 10px 6px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;transition:all .2s;margin-bottom:2px}
+.sb-item:hover{background:rgba(124,58,237,0.15);color:var(--text)}
+.sb-item.active{background:rgba(124,58,237,0.2);color:var(--purple2)}
+.sb-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sb-footer{padding:12px;border-top:1px solid var(--border)}
+.sb-admin-info{font-size:12px;color:var(--text3)}
+.sb-admin-email{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+
+/* TOPBAR */
+.topbar{background:rgba(7,9,26,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-size:16px;font-weight:600}
+.mobile-menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px}
+.mobile-menu-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* CONTENT */
+.content{padding:20px;flex:1}
+.page-section{display:none}
+.page-section.active{display:block}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-num{font-size:26px;font-weight:700;color:var(--text)}
+.stat-num.purple{color:var(--purple2)}
+.stat-num.gold{color:var(--gold)}
+.stat-num.green{color:var(--success)}
+.stat-num.red{color:var(--danger)}
+.stat-num.blue{color:var(--info)}
+.stat-change{font-size:11px;margin-top:4px;color:var(--text3)}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:600}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;background:rgba(255,255,255,0.03);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border2)}
+td{padding:10px 12px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple2)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.85}
+.btn-success{background:var(--success);color:#fff}
+.btn-gold{background:var(--gold);color:#111}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+.btn-xs{padding:3px 8px;font-size:11px;border-radius:5px}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(16,185,129,0.15);color:var(--success)}
+.badge-red{background:rgba(239,68,68,0.15);color:var(--danger)}
+.badge-purple{background:rgba(124,58,237,0.15);color:var(--purple2)}
+.badge-gold{background:rgba(245,158,11,0.15);color:var(--gold)}
+.badge-blue{background:rgba(59,130,246,0.15);color:var(--info)}
+.badge-gray{background:rgba(255,255,255,0.08);color:var(--text2)}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:500}
+.form-input,.form-select{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus,.form-select:focus{border-color:var(--purple2)}
+.form-input::placeholder{color:var(--text3)}
+.form-select option{background:#111}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal-actions{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:360px}
+.login-logo{font-size:36px;text-align:center;margin-bottom:8px}
+.login-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:4px;background:linear-gradient(135deg,var(--purple2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-sub{font-size:12px;color:var(--text3);text-align:center;margin-bottom:24px}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:16px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.search-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:9px 12px 9px 34px;font-size:13px;color:var(--text);outline:none}
+.search-input:focus{border-color:var(--purple2)}
+.search-input::placeholder{color:var(--text3)}
+
+/* TOAST */
+.toast{position:fixed;top:16px;right:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;z-index:999;opacity:0;transition:all .3s;pointer-events:none;backdrop-filter:blur(10px)}
+.toast.show{opacity:1}
+
+/* LIVE INDICATOR */
+.live-dot{width:7px;height:7px;background:var(--success);border-radius:50%;animation:pulse2 1.5s infinite;display:inline-block;margin-right:5px}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* WINNER FORM */
+.winner-preview{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:14px;margin-bottom:12px}
+
+/* PROGRESS */
+.progress-bar{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:3px}
+
+/* LOG ENTRY */
+.log-entry{padding:10px 0;border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:flex-start;font-size:13px}
+.log-dot{width:8px;height:8px;background:var(--purple2);border-radius:50%;margin-top:5px;flex-shrink:0}
+
+.text-muted{color:var(--text2)}
+.text-xs{font-size:11px}
+.mt-8{margin-top:8px}
+.mt-12{margin-top:12px}
+.mt-16{margin-top:16px}
+.flex{display:flex}
+.items-center{align-items:center}
+.justify-between{justify-content:space-between}
+.gap-8{gap:8px}
+.gap-10{gap:10px}
+.w-full{width:100%}
+.empty{text-align:center;padding:32px;color:var(--text3);font-size:13px}
+
+/* SPINNER */
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--purple2);border-radius:50%;animation:spin 1s linear infinite;margin:24px auto;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">🔐</div>
+      <div class="login-title">Admin Dashboard</div>
+      <div class="login-sub">Lucky Ticket — Secure Admin Access</div>
+      <div class="form-group">
+        <label class="form-label">Admin Email</label>
+        <input class="form-input" id="adminEmail" type="email" placeholder="admin@luckyticket.app">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="adminPass" type="password" placeholder="Admin password">
+        <div style="font-size:11px;color:var(--danger);margin-top:4px" id="loginErr"></div>
+      </div>
+      <button class="btn btn-primary w-full" style="justify-content:center;padding:11px" onclick="doAdminLogin()">Sign In to Admin</button>
+      <div style="margin-top:16px;padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:11px;color:var(--danger)">
+        ⚠️ Restricted access. Unauthorised access attempts are logged.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="adminApp" style="display:none">
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-txt">🎫 Lucky Ticket</div>
+        <div class="sb-logo-sub">Admin Dashboard</div>
+      </div>
+      <nav class="sb-nav">
+        <div class="sb-section">Overview</div>
+        <div class="sb-item active" onclick="goTo('overview')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+        </div>
+        <div class="sb-section">Competitions</div>
+        <div class="sb-item" onclick="goTo('competitions')">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>Competitions
+        </div>
+        <div class="sb-item" onclick="goTo('plans')">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Plans
+        </div>
+        <div class="sb-item" onclick="goTo('winners')">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Winners
+        </div>
+        <div class="sb-section">Users</div>
+        <div class="sb-item" onclick="goTo('customers')">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Customers
+        </div>
+        <div class="sb-section">System</div>
+        <div class="sb-item" onclick="goTo('announcements')">
+          <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>Announcements
+        </div>
+        <div class="sb-item" onclick="goTo('support')">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Support
+        </div>
+        <div class="sb-item" onclick="goTo('activitylog')">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Activity Log
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-admin-info">Signed in as</div>
+        <div class="sb-admin-email" id="sbAdminEmail">—</div>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="doAdminLogout()">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="topbar">
+        <div class="flex items-center gap-10">
+          <button class="mobile-menu-btn" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <span class="topbar-title" id="topbarTitle">Dashboard</span>
+        </div>
+        <div class="flex items-center gap-8">
+          <span class="text-xs text-muted"><span class="live-dot"></span>Live</span>
+          <span class="badge badge-purple" id="topbarVisitors">👁 — visitors</span>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- OVERVIEW -->
+        <div class="page-section active" id="sec-overview">
+          <div class="stats-row" id="overviewStats">
+            <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-num purple" id="st-users">—</div></div>
+            <div class="stat-card"><div class="stat-label">Active Today</div><div class="stat-num green" id="st-active">—</div></div>
+            <div class="stat-card"><div class="stat-label">Competitions</div><div class="stat-num blue" id="st-comps">—</div></div>
+            <div class="stat-card"><div class="stat-label">Total Participants</div><div class="stat-num gold" id="st-parts">—</div></div>
+            <div class="stat-card"><div class="stat-label">Total Winners</div><div class="stat-num gold" id="st-winners">—</div></div>
+            <div class="stat-card"><div class="stat-label">Live Visitors</div><div class="stat-num purple" id="st-visitors">—</div></div>
+          </div>
+
+          <!-- LIVE COMPETITIONS -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="live-dot"></span>Live Competition Status</div>
+              <button class="btn btn-primary btn-sm" onclick="openCreateCompModal()">+ New Competition</button>
+            </div>
+            <div id="liveCompsList"><div class="spinner"></div></div>
+          </div>
+
+          <!-- RECENT WINNERS -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🏆 Recent Winners</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Player</th><th>Plan</th><th>Score</th><th>Coins</th><th>Date</th></tr></thead>
+                <tbody id="recentWinnersTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPETITIONS -->
+        <div class="page-section" id="sec-competitions">
+          <div class="card-header" style="margin-bottom:16px">
+            <div></div>
+            <button class="btn btn-primary btn-sm" onclick="openCreateCompModal()">+ Create Competition</button>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">All Competitions</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Plan</th><th>Prize</th><th>Participants</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="allCompsTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLANS -->
+        <div class="page-section" id="sec-plans">
+          <div class="card-header" style="margin-bottom:16px">
+            <div></div>
+            <button class="btn btn-primary btn-sm" onclick="openPlanModal(null)">+ New Plan</button>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Competition Plans</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Order</th><th>Name</th><th>Prize Display</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="plansTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- WINNERS -->
+        <div class="page-section" id="sec-winners">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Winner Management</div>
+            <div class="text-muted text-xs" style="margin-bottom:12px">Review quiz results and publish winners. Admin verification required before results go live.</div>
+            <div class="card-title text-xs" style="margin-bottom:8px;color:var(--warning)">Pending Verification</div>
+            <div id="pendingResultsList"><div class="spinner"></div></div>
+            <div class="card-title text-xs" style="margin:16px 0 8px">Published Winners</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Player</th><th>Competition</th><th>Score</th><th>Coins</th><th>Published</th></tr></thead>
+                <tbody id="publishedWinnersTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOMERS -->
+        <div class="page-section" id="sec-customers">
+          <div class="card">
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="customerSearch" placeholder="Search by name, ID, email…" oninput="filterCustomers(this.value)">
+            </div>
+            <div class="card-title" style="margin-bottom:12px">All Customers <span id="customerCount" class="badge badge-gray"></span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Player ID</th><th>Name</th><th>Phone</th><th>Entries</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="customersTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANNOUNCEMENTS -->
+        <div class="page-section" id="sec-announcements">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Create Announcement</div>
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input class="form-input" id="annTitle" placeholder="Announcement title">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message</label>
+              <textarea class="form-input" id="annBody" rows="3" placeholder="Message content…" style="resize:vertical"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="annType">
+                <option value="info">Info</option>
+                <option value="winner">Winner</option>
+                <option value="warning">Warning</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="publishAnnouncement()">Publish to All Users</button>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Recent Announcements</div>
+            <div id="announcementsList"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- SUPPORT -->
+        <div class="page-section" id="sec-support">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Customer Support Tickets</div>
+            <div class="text-muted text-xs" style="margin-bottom:12px">Manage and respond to customer queries.</div>
+            <div id="supportTicketsList"><div class="empty">No support tickets yet. Customers submit via the main site.</div></div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY LOG -->
+        <div class="page-section" id="sec-activitylog">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Admin Activity Log</div>
+            <div id="activityLogList"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- CREATE COMPETITION MODAL -->
+<div class="modal-overlay" id="createCompModal">
+  <div class="modal-box">
+    <div class="modal-title">Create Competition</div>
+    <div class="form-group">
+      <label class="form-label">Select Plan</label>
+      <select class="form-select" id="newCompPlan"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Competition ID / Label</label>
+      <input class="form-input" id="newCompId" placeholder="e.g. COMP-001">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('createCompModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doCreateComp()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="modal-overlay" id="planModal">
+  <div class="modal-box">
+    <div class="modal-title" id="planModalTitle">New Plan</div>
+    <input type="hidden" id="planEditId">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Plan Name</label>
+        <input class="form-input" id="planName" placeholder="Plan 1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Display Order</label>
+        <input class="form-input" id="planOrder" type="number" placeholder="1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prize Display</label>
+        <input class="form-input" id="planPrize" placeholder="₹200">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prize Coins (virtual)</label>
+        <input class="form-input" id="planCoins" type="number" placeholder="200">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="planStatus">
+        <option value="open">Open</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('planModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER EDIT MODAL -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Customer</div>
+    <input type="hidden" id="editCustId">
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="form-input" id="editCustName" placeholder="Full name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone</label>
+      <input class="form-input" id="editCustPhone" placeholder="Phone number">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Account Status</label>
+      <select class="form-select" id="editCustBlocked">
+        <option value="false">Active</option>
+        <option value="true">Blocked</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('customerModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUBLISH WINNER MODAL -->
+<div class="modal-overlay" id="winnerModal">
+  <div class="modal-box">
+    <div class="modal-title">Publish Winner</div>
+    <input type="hidden" id="winnerResultId">
+    <input type="hidden" id="winnerCompId">
+    <div class="winner-preview" id="winnerPreview"></div>
+    <div class="form-group">
+      <label class="form-label">Prize Coins to Award</label>
+      <input class="form-input" id="winnerCoins" type="number" placeholder="e.g. 200">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('winnerModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="doPublishWinner()">✓ Publish Winner</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPETITION DETAIL MODAL -->
+<div class="modal-overlay" id="compDetailModal">
+  <div class="modal-box">
+    <div class="modal-title" id="compDetailTitle">Competition Details</div>
+    <div id="compDetailContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('compDetailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== FIREBASE CONFIG =====================
+// REPLACE THIS ENTIRE OBJECT with the SAME Firebase project config as the customer site
+const firebaseConfig = {
+  apiKey: "AIzaSyD6AMNbkUgBIZgRrM6z8qXlpvo_q07g7cc",
+  authDomain: "luckyticket-f6fcc.firebaseapp.com",
+  projectId: "luckyticket-f6fcc",
+  storageBucket: "luckyticket-f6fcc.firebasestorage.app",
+  messagingSenderId: "311920974005",
+  appId: "1:311920974005:web:20c28779a011135466c6fc"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Admin emails — add your admin email(s) here
+// ALSO enforce this in Firestore Security Rules
+const ADMIN_EMAILS = [
+  "amankumaryt1010@gmail.com"
+  // Add more admin emails here
+];
+
+let currentAdmin = null;
+let allCustomers = [];
+
+// ===================== AUTH =====================
+auth.onAuthStateChanged(async (user) => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    currentAdmin = user;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminApp').style.display = 'block';
+    document.getElementById('sbAdminEmail').textContent = user.email;
+    initAdmin();
+  } else if (user) {
+    // Not an admin
+    await auth.signOut();
+    document.getElementById('loginErr').textContent = 'Access denied. Not an admin account.';
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('adminApp').style.display = 'none';
+  } else {
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('adminApp').style.display = 'none';
+  }
+});
+
+async function doAdminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+  if (!ADMIN_EMAILS.includes(email)) {
+    err.textContent = 'Access denied.';
+    return;
+  }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err.textContent = e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+      ? 'Incorrect credentials.' : 'Login failed. Try again.';
+  }
+}
+
+async function doAdminLogout() {
+  await logActivity('Admin signed out');
+  await auth.signOut();
+}
+
+// ===================== INIT =====================
+function initAdmin() {
+  loadOverview();
+  loadLiveComps();
+  loadRecentWinners();
+  setupVisitorTracking();
+}
+
+// ===================== NAVIGATION =====================
+function goTo(section) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + section).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(s => {
+    if (s.textContent.trim().toLowerCase().includes(section.toLowerCase().replace(/log/,'').trim())) {
+      s.classList.add('active');
+    }
+  });
+
+  const titles = { overview:'Dashboard', competitions:'Competitions', plans:'Plans', winners:'Winners', customers:'Customers', announcements:'Announcements', support:'Support', activitylog:'Activity Log' };
+  document.getElementById('topbarTitle').textContent = titles[section] || 'Dashboard';
+
+  // Load data for section
+  if (section === 'competitions') loadAllComps();
+  if (section === 'plans') loadPlans();
+  if (section === 'winners') loadWinners();
+  if (section === 'customers') loadCustomers();
+  if (section === 'announcements') loadAnnouncements();
+  if (section === 'activitylog') loadActivityLog();
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ===================== TOAST =====================
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('show'); });
+});
+
+// ===================== OVERVIEW =====================
+async function loadOverview() {
+  try {
+    const stats = await db.collection('stats').doc('global').get();
+    const d = stats.data() || {};
+    document.getElementById('st-users').textContent = d.totalUsers || 0;
+    document.getElementById('st-comps').textContent = d.totalCompetitions || 0;
+    document.getElementById('st-parts').textContent = d.totalParticipants || 0;
+    document.getElementById('st-winners').textContent = d.totalWinners || 0;
+
+    // Active today (users who logged in today)
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const activeSnap = await db.collection('users')
+      .where('lastSeen', '>=', firebase.firestore.Timestamp.fromDate(today))
+      .get();
+    document.getElementById('st-active').textContent = activeSnap.size;
+  } catch(e) {}
+}
+
+// ===================== LIVE COMPS =====================
+async function loadLiveComps() {
+  const container = document.getElementById('liveCompsList');
+  try {
+    const snap = await db.collection('competitions')
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
+
+    if (snap.empty) {
+      container.innerHTML = '<div class="empty">No competitions yet. Create one to get started.</div>';
+      return;
+    }
+
+    container.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Plan</th><th>Participants</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>`;
+
+    snap.forEach(doc => {
+      const c = doc.data();
+      const pct = Math.min(100, ((c.participantCount || 0) / 20) * 100);
+      container.querySelector('tbody').innerHTML += `
+        <tr>
+          <td><code style="font-size:11px;color:var(--purple2)">#${esc(c.compId || doc.id.substr(0,8))}</code></td>
+          <td>${esc(c.planName || '—')}</td>
+          <td style="font-weight:600">${c.participantCount || 0}/20</td>
+          <td style="min-width:100px"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></td>
+          <td><span class="badge badge-${c.status==='open'?'green':c.status==='pending'?'gold':c.status==='completed'?'blue':'gray'}">${c.status}</span></td>
+          <td>
+            <button class="btn btn-outline btn-xs" onclick="viewCompDetail('${doc.id}')">View</button>
+            ${c.status==='pending'?`<button class="btn btn-success btn-xs" onclick="closeCompetition('${doc.id}')">Start Quiz</button>`:''}
+            ${c.status==='open'?`<button class="btn btn-danger btn-xs" onclick="toggleCompStatus('${doc.id}','${c.status}')">Close</button>`:''}
+          </td>
+        </tr>`;
+    });
+
+    container.innerHTML += '</tbody></table></div>';
+  } catch(e) {
+    container.innerHTML = '<div class="empty">Could not load competitions.</div>';
+  }
+}
+
+async function loadAllComps() {
+  const tbody = document.getElementById('allCompsTable');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+  try {
+    const snap = await db.collection('competitions').orderBy('createdAt', 'desc').get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No competitions.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const c = doc.data();
+      tbody.innerHTML += `<tr>
+        <td><code style="font-size:11px;color:var(--purple2)">#${esc(c.compId || doc.id.substr(0,8))}</code></td>
+        <td>${esc(c.planName || '—')}</td>
+        <td style="color:var(--gold);font-weight:600">${esc(c.prizeDisplay || '—')}</td>
+        <td>${c.participantCount || 0}/20</td>
+        <td><span class="badge badge-${c.status==='open'?'green':c.status==='pending'?'gold':c.status==='completed'?'blue':'gray'}">${c.status}</span></td>
+        <td>
+          <button class="btn btn-outline btn-xs" onclick="viewCompDetail('${doc.id}')">View</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteComp('${doc.id}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+async function viewCompDetail(compId) {
+  const doc = await db.collection('competitions').doc(compId).get();
+  if (!doc.exists) return;
+  const c = doc.data();
+  document.getElementById('compDetailTitle').textContent = `Competition #${c.compId || compId.substr(0,8)}`;
+  document.getElementById('compDetailContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="stat-card"><div class="stat-label">Plan</div><div style="font-size:15px;font-weight:600">${esc(c.planName || '—')}</div></div>
+      <div class="stat-card"><div class="stat-label">Prize</div><div style="font-size:15px;font-weight:600;color:var(--gold)">${esc(c.prizeDisplay || '—')}</div></div>
+      <div class="stat-card"><div class="stat-label">Participants</div><div style="font-size:15px;font-weight:600">${c.participantCount || 0}/20</div></div>
+      <div class="stat-card"><div class="stat-label">Status</div><div class="badge badge-${c.status==='open'?'green':c.status==='completed'?'blue':'gold'}" style="margin-top:4px">${c.status}</div></div>
+    </div>
+    ${c.winnerName ? `<div class="winner-preview"><strong>🏆 Winner: ${esc(c.winnerName)}</strong><br><span class="text-xs text-muted">Coins awarded: ${c.prizeCoins || 0}</span></div>` : ''}
+    <div class="text-xs text-muted">Created: ${formatDate(c.createdAt)}</div>
+  `;
+  openModal('compDetailModal');
+}
+
+async function toggleCompStatus(compId, currentStatus) {
+  const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+  await db.collection('competitions').doc(compId).update({ status: newStatus });
+  await logActivity(`Changed competition ${compId.substr(0,8)} status to ${newStatus}`);
+  showToast(`Status updated to ${newStatus}`, 'success');
+  loadLiveComps();
+  loadAllComps();
+}
+
+async function closeCompetition(compId) {
+  if (!confirm('Mark this competition as completed and open quiz scoring?')) return;
+  await db.collection('competitions').doc(compId).update({ status: 'completed', completedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  await logActivity(`Closed competition ${compId.substr(0,8)}`);
+  showToast('Competition closed. Players can now submit quiz scores.', 'success');
+  loadLiveComps();
+}
+
+async function deleteComp(compId) {
+  if (!confirm('Delete this competition? This cannot be undone.')) return;
+  await db.collection('competitions').doc(compId).delete();
+  await logActivity(`Deleted competition ${compId.substr(0,8)}`);
+  showToast('Competition deleted.', 'success');
+  loadAllComps();
+  loadLiveComps();
+}
+
+// ===================== CREATE COMPETITION =====================
+async function openCreateCompModal() {
+  const snap = await db.collection('plans').orderBy('order').get();
+  const sel = document.getElementById('newCompPlan');
+  sel.innerHTML = '';
+  snap.forEach(doc => {
+    const p = doc.data();
+    sel.innerHTML += `<option value="${doc.id}" data-name="${esc(p.name)}" data-prize="${esc(p.prizeDisplay)}" data-coins="${p.prizeCoins||0}">${esc(p.name)} — ${esc(p.prizeDisplay)}</option>`;
+  });
+  document.getElementById('newCompId').value = 'COMP-' + String(Date.now()).substr(-4);
+  openModal('createCompModal');
+}
+
+async function doCreateComp() {
+  const sel = document.getElementById('newCompPlan');
+  const opt = sel.options[sel.selectedIndex];
+  const planId = sel.value;
+  const compId = document.getElementById('newCompId').value.trim();
+  if (!planId || !compId) { showToast('Fill all fields.', 'error'); return; }
+
+  await db.collection('competitions').add({
+    planId,
+    planName: opt.dataset.name,
+    prizeDisplay: opt.dataset.prize,
+    prizeCoins: parseInt(opt.dataset.coins) || 0,
+    compId,
+    status: 'open',
+    participantCount: 0,
+    participantIds: [],
+    usedTickets: [],
+    participantTickets: {},
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdBy: currentAdmin.email
+  });
+
+  await db.collection('stats').doc('global').set({ totalCompetitions: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+  await logActivity(`Created competition ${compId}`);
+  showToast('Competition created!', 'success');
+  closeModal('createCompModal');
+  loadLiveComps();
+  loadAllComps();
+  loadOverview();
+}
+
+// ===================== PLANS =====================
+async function loadPlans() {
+  const tbody = document.getElementById('plansTable');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty">Loading…</td></tr>';
+  try {
+    const snap = await db.collection('plans').orderBy('order').get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No plans. Click "+ New Plan" to create one.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const p = doc.data();
+      tbody.innerHTML += `<tr>
+        <td>${p.order || '—'}</td>
+        <td style="font-weight:600">${esc(p.name)}</td>
+        <td style="color:var(--gold)">${esc(p.prizeDisplay)}</td>
+        <td><span class="badge badge-${p.status==='open'?'green':'red'}">${p.status}</span></td>
+        <td>
+          <button class="btn btn-outline btn-xs" onclick="openPlanModal('${doc.id}')">Edit</button>
+          <button class="btn btn-danger btn-xs" onclick="deletePlan('${doc.id}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+function openPlanModal(id) {
+  document.getElementById('planEditId').value = id || '';
+  document.getElementById('planModalTitle').textContent = id ? 'Edit Plan' : 'New Plan';
+  if (!id) {
+    ['planName','planPrize','planOrder','planCoins'].forEach(f => document.getElementById(f).value = '');
+    document.getElementById('planStatus').value = 'open';
+  } else {
+    db.collection('plans').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const p = doc.data();
+      document.getElementById('planName').value = p.name || '';
+      document.getElementById('planPrize').value = p.prizeDisplay || '';
+      document.getElementById('planOrder').value = p.order || '';
+      document.getElementById('planCoins').value = p.prizeCoins || '';
+      document.getElementById('planStatus').value = p.status || 'open';
+    });
+  }
+  openModal('planModal');
+}
+
+async function savePlan() {
+  const id = document.getElementById('planEditId').value;
+  const data = {
+    name: document.getElementById('planName').value.trim(),
+    prizeDisplay: document.getElementById('planPrize').value.trim(),
+    order: parseInt(document.getElementById('planOrder').value) || 0,
+    prizeCoins: parseInt(document.getElementById('planCoins').value) || 0,
+    status: document.getElementById('planStatus').value
+  };
+  if (!data.name || !data.prizeDisplay) { showToast('Fill name and prize.', 'error'); return; }
+  if (id) {
+    await db.collection('plans').doc(id).update(data);
+    await logActivity(`Updated plan ${data.name}`);
+    showToast('Plan updated!', 'success');
+  } else {
+    await db.collection('plans').add(data);
+    await logActivity(`Created plan ${data.name}`);
+    showToast('Plan created!', 'success');
+  }
+  closeModal('planModal');
+  loadPlans();
+}
+
+async function deletePlan(id) {
+  if (!confirm('Delete this plan?')) return;
+  await db.collection('plans').doc(id).delete();
+  await logActivity('Deleted a plan');
+  showToast('Plan deleted.', 'success');
+  loadPlans();
+}
+
+// ===================== WINNERS =====================
+async function loadWinners() {
+  await loadPendingResults();
+  await loadPublishedWinners();
+}
+
+async function loadPendingResults() {
+  const container = document.getElementById('pendingResultsList');
+  try {
+    const snap = await db.collection('quizResults')
+      .where('verified', '==', false)
+      .orderBy('submittedAt', 'desc')
+      .get();
+
+    // If 'verified' field not set yet, also query without filter
+    const snap2 = await db.collection('quizResults')
+      .orderBy('submittedAt', 'desc')
+      .limit(20)
+      .get();
+
+    const pending = [];
+    snap2.forEach(doc => {
+      const d = doc.data();
+      if (!d.verified && !d.published) pending.push({ id: doc.id, ...d });
+    });
+
+    if (pending.length === 0) {
+      container.innerHTML = '<div class="empty">No pending results.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    pending.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.style.marginBottom = '10px';
+      div.innerHTML = `
+        <div class="flex justify-between items-center">
+          <div>
+            <div style="font-weight:600">${esc(r.userName || 'Unknown')}</div>
+            <div class="text-xs text-muted">Competition: ${esc(r.competitionId || '—')}</div>
+            <div class="text-xs" style="color:var(--gold)">Score: ${r.score}/${r.total} (${Math.round((r.score/r.total)*100)}%)</div>
+            <div class="text-xs text-muted">${formatDate(r.submittedAt)}</div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="openWinnerModal('${r.id}','${r.competitionId}','${esc(r.userName)}',${r.score},${r.total})">Verify & Publish</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } catch(e) {
+    container.innerHTML = '<div class="empty">Could not load results.</div>';
+  }
+}
+
+async function loadPublishedWinners() {
+  const tbody = document.getElementById('publishedWinnersTable');
+  try {
+    const snap = await db.collection('competitions')
+      .where('status', '==', 'completed')
+      .where('winnerId', '!=', null)
+      .orderBy('winnerId')
+      .orderBy('completedAt', 'desc')
+      .limit(20)
+      .get();
+
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No published winners yet.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const c = doc.data();
+      tbody.innerHTML += `<tr>
+        <td style="font-weight:600">${esc(c.winnerName || '—')}</td>
+        <td>${esc(c.planName || '—')}</td>
+        <td>${c.winnerScore || '—'}</td>
+        <td style="color:var(--gold)">🪙 ${c.prizeCoins || 0}</td>
+        <td class="text-xs">${formatDate(c.completedAt)}</td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+async function loadRecentWinners() {
+  const tbody = document.getElementById('recentWinnersTable');
+  try {
+    const snap = await db.collection('competitions')
+      .where('status', '==', 'completed')
+      .where('winnerId', '!=', null)
+      .orderBy('winnerId')
+      .orderBy('completedAt', 'desc')
+      .limit(5)
+      .get();
+
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No winners yet.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const c = doc.data();
+      tbody.innerHTML += `<tr>
+        <td style="font-weight:600">${esc(c.winnerName || '—')}</td>
+        <td>${esc(c.planName || '—')}</td>
+        <td>${c.winnerScore || '—'}</td>
+        <td style="color:var(--gold)">🪙 ${c.prizeCoins || 0}</td>
+        <td class="text-xs">${formatDate(c.completedAt)}</td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+function openWinnerModal(resultId, compId, userName, score, total) {
+  document.getElementById('winnerResultId').value = resultId;
+  document.getElementById('winnerCompId').value = compId;
+  document.getElementById('winnerPreview').innerHTML = `
+    <div style="font-weight:700;font-size:16px">🏆 ${esc(userName)}</div>
+    <div class="text-xs text-muted" style="margin-top:4px">Score: ${score}/${total} (${Math.round(score/total*100)}%)</div>
+    <div class="text-xs text-muted">Competition: ${esc(compId)}</div>
+  `;
+  document.getElementById('winnerCoins').value = '';
+  openModal('winnerModal');
+}
+
+async function doPublishWinner() {
+  const resultId = document.getElementById('winnerResultId').value;
+  const compId = document.getElementById('winnerCompId').value;
+  const coins = parseInt(document.getElementById('winnerCoins').value);
+  if (!coins || coins < 1) { showToast('Enter prize coins.', 'error'); return; }
+
+  try {
+    // Get result
+    const resultDoc = await db.collection('quizResults').doc(resultId).get();
+    if (!resultDoc.exists) { showToast('Result not found.', 'error'); return; }
+    const result = resultDoc.data();
+
+    // Update quiz result
+    await db.collection('quizResults').doc(resultId).update({ verified: true, published: true });
+
+    // Update competition
+    await db.collection('competitions').doc(compId).update({
+      winnerId: result.userId,
+      winnerName: result.userName,
+      winnerScore: `${result.score}/${result.total}`,
+      prizeCoins: coins,
+      status: 'completed',
+      completedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Award coins to user
+    await db.collection('users').doc(result.userId).update({
+      coins: firebase.firestore.FieldValue.increment(coins),
+      totalWins: firebase.firestore.FieldValue.increment(1)
+    });
+
+    // Update user's ticket
+    const tickets = await db.collection('tickets')
+      .where('userId', '==', result.userId)
+      .where('competitionId', '==', compId)
+      .get();
+    tickets.forEach(t => t.ref.update({ won: true }));
+
+    // Add winner notification to user
+    await db.collection('notifications').add({
+      userId: result.userId,
+      title: `🏆 You won ${coins} coins!`,
+      body: `Congratulations! You won the ${compId} competition.`,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false
+    });
+
+    // Update global stats
+    await db.collection('stats').doc('global').set({
+      totalWinners: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true });
+
+    await logActivity(`Published winner ${result.userName} for competition ${compId}`);
+    showToast('Winner published!', 'success');
+    closeModal('winnerModal');
+    loadWinners();
+    loadRecentWinners();
+    loadOverview();
+  } catch(e) {
+    console.error(e);
+    showToast('Could not publish winner.', 'error');
+  }
+}
+
+// ===================== CUSTOMERS =====================
+async function loadCustomers() {
+  const tbody = document.getElementById('customersTable');
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+  try {
+    const snap = await db.collection('users').orderBy('createdAt', 'desc').get();
+    allCustomers = [];
+    snap.forEach(doc => allCustomers.push({ id: doc.id, ...doc.data() }));
+    document.getElementById('customerCount').textContent = allCustomers.length;
+    renderCustomers(allCustomers);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Could not load customers.</td></tr>';
+  }
+}
+
+function renderCustomers(customers) {
+  const tbody = document.getElementById('customersTable');
+  if (customers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No customers found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  customers.forEach(c => {
+    tbody.innerHTML += `<tr>
+      <td><code style="font-size:11px;color:var(--purple2)">${esc(c.playerId || '—')}</code></td>
+      <td style="font-weight:600">${esc(c.name || '—')}</td>
+      <td class="text-xs">${esc(c.phone || '—')}</td>
+      <td>${c.totalEntries || 0}</td>
+      <td><span class="badge badge-${c.blocked ? 'red' : 'green'}">${c.blocked ? 'Blocked' : 'Active'}</span></td>
+      <td>
+        <button class="btn btn-outline btn-xs" onclick="openCustModal('${c.id}')">Edit</button>
+        <button class="btn btn-${c.blocked?'success':'danger'} btn-xs" onclick="toggleBlock('${c.id}',${c.blocked})">${c.blocked ? 'Unblock' : 'Block'}</button>
+      </td>
+    </tr>`;
+  });
+}
+
+function filterCustomers(query) {
+  const q = query.toLowerCase();
+  const filtered = allCustomers.filter(c =>
+    (c.name || '').toLowerCase().includes(q) ||
+    (c.playerId || '').toLowerCase().includes(q) ||
+    (c.email || '').toLowerCase().includes(q)
+  );
+  renderCustomers(filtered);
+}
+
+function openCustModal(uid) {
+  const c = allCustomers.find(x => x.id === uid);
+  if (!c) return;
+  document.getElementById('editCustId').value = uid;
+  document.getElementById('editCustName').value = c.name || '';
+  document.getElementById('editCustPhone').value = c.phone || '';
+  document.getElementById('editCustBlocked').value = String(c.blocked || false);
+  openModal('customerModal');
+}
+
+async function saveCustomer() {
+  const uid = document.getElementById('editCustId').value;
+  const data = {
+    name: document.getElementById('editCustName').value.trim(),
+    phone: document.getElementById('editCustPhone').value.trim(),
+    blocked: document.getElementById('editCustBlocked').value === 'true'
+  };
+  await db.collection('users').doc(uid).update(data);
+  await logActivity(`Edited customer profile ${uid.substr(0,8)}`);
+  showToast('Customer updated!', 'success');
+  closeModal('customerModal');
+  loadCustomers();
+}
+
+async function toggleBlock(uid, currentlyBlocked) {
+  const newState = !currentlyBlocked;
+  await db.collection('users').doc(uid).update({ blocked: newState });
+  await logActivity(`${newState ? 'Blocked' : 'Unblocked'} user ${uid.substr(0,8)}`);
+  showToast(`Account ${newState ? 'blocked' : 'unblocked'}.`, 'success');
+  loadCustomers();
+}
+
+// ===================== ANNOUNCEMENTS =====================
+async function publishAnnouncement() {
+  const title = document.getElementById('annTitle').value.trim();
+  const body = document.getElementById('annBody').value.trim();
+  const type = document.getElementById('annType').value;
+  if (!title || !body) { showToast('Fill title and message.', 'error'); return; }
+
+  await db.collection('announcements').add({
+    title, body, type,
+    publishedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    publishedBy: currentAdmin.email
+  });
+
+  // Send to all users as notification
+  const usersSnap = await db.collection('users').get();
+  const batch = db.batch();
+  usersSnap.forEach(doc => {
+    const ref = db.collection('notifications').doc();
+    batch.set(ref, { userId: doc.id, title, body, type, createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
+  });
+  await batch.commit();
+
+  await logActivity(`Published announcement: ${title}`);
+  showToast('Announcement published to all users!', 'success');
+  document.getElementById('annTitle').value = '';
+  document.getElementById('annBody').value = '';
+  loadAnnouncements();
+}
+
+async function loadAnnouncements() {
+  const container = document.getElementById('announcementsList');
+  try {
+    const snap = await db.collection('announcements').orderBy('publishedAt', 'desc').limit(10).get();
+    if (snap.empty) { container.innerHTML = '<div class="empty">No announcements yet.</div>'; return; }
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const a = doc.data();
+      container.innerHTML += `<div class="card" style="margin-bottom:10px">
+        <div class="flex justify-between items-center">
+          <div><div style="font-weight:600">${esc(a.title)}</div><div class="text-xs text-muted">${esc(a.body)}</div></div>
+          <div><span class="badge badge-${a.type==='winner'?'gold':a.type==='warning'?'red':'blue'}">${a.type}</span><div class="text-xs text-muted" style="margin-top:4px">${formatDate(a.publishedAt)}</div></div>
+        </div>
+      </div>`;
+    });
+  } catch(e) {}
+}
+
+// ===================== ACTIVITY LOG =====================
+async function loadActivityLog() {
+  const container = document.getElementById('activityLogList');
+  try {
+    const snap = await db.collection('adminLog').orderBy('timestamp', 'desc').limit(50).get();
+    if (snap.empty) { container.innerHTML = '<div class="empty">No activity logged yet.</div>'; return; }
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const l = doc.data();
+      container.innerHTML += `<div class="log-entry">
+        <div class="log-dot"></div>
+        <div>
+          <div style="font-size:13px">${esc(l.action)}</div>
+          <div class="text-xs text-muted">${esc(l.admin)} · ${formatDate(l.timestamp)}</div>
+        </div>
+      </div>`;
+    });
+  } catch(e) {}
+}
+
+async function logActivity(action) {
+  try {
+    await db.collection('adminLog').add({
+      action,
+      admin: currentAdmin?.email || 'admin',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {}
+}
+
+// ===================== VISITOR TRACKING =====================
+function setupVisitorTracking() {
+  // Increment visitor count on load, decrement on unload
+  const visitorRef = db.collection('stats').doc('global');
+  visitorRef.set({ activeNow: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+  window.addEventListener('beforeunload', () => {
+    visitorRef.set({ activeNow: firebase.firestore.FieldValue.increment(-1) }, { merge: true });
+  });
+
+  // Real-time visitor count display
+  db.collection('stats').doc('global').onSnapshot(snap => {
+    const d = snap.data() || {};
+    const v = Math.max(0, d.activeNow || 0);
+    document.getElementById('topbarVisitors').textContent = `👁 ${v} visitor${v !== 1 ? 's' : ''}`;
+    document.getElementById('st-visitors').textContent = v;
+  });
+}
+
+// ===================== UTILS =====================
+function esc(str) {
+  return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+}
+
+// ===================== SEED DEFAULT PLANS =====================
+async function seedDefaultPlans() {
+  const existing = await db.collection('plans').get();
+  if (!existing.empty) return;
+  const plans = [
+    { name:'Plan 1', prizeDisplay:'₹200', prizeCoins:200, order:1, status:'open' },
+    { name:'Plan 2', prizeDisplay:'₹500', prizeCoins:500, order:2, status:'open' },
+    { name:'Plan 3', prizeDisplay:'₹700', prizeCoins:700, order:3, status:'open' },
+    { name:'Plan 4', prizeDisplay:'₹1,300', prizeCoins:1300, order:4, status:'open' },
+    { name:'Plan 5', prizeDisplay:'₹3,500', prizeCoins:3500, order:5, status:'open', featured:true },
+    { name:'Plan 6', prizeDisplay:'₹7,500', prizeCoins:7500, order:6, status:'open' },
+    { name:'Plan 7', prizeDisplay:'₹15,000', prizeCoins:15000, order:7, status:'open' }
+  ];
+  const batch = db.batch();
+  plans.forEach(p => batch.set(db.collection('plans').doc(), p));
+  await batch.commit();
+  showToast('Default plans created!', 'success');
+}
+
+// Auto-seed plans when admin first logs in
+auth.onAuthStateChanged(user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    setTimeout(seedDefaultPlans, 2000);
+  }
+});
+</script>
+</body>
+</html>
