@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucky Ticket — Admin</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#07091a;--bg2:#0c0f24;--bg3:#111530;--purple:#7c3aed;--purple2:#8b5cf6;--gold:#f59e0b;--text:#e2e8f0;--text2:#94a3b8;--text3:#475569;--success:#10b981;--danger:#ef4444;--info:#3b82f6;--border:rgba(124,58,237,0.25);--border2:rgba(255,255,255,0.08);--radius:12px;--card:#0c0f24}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s}
+.main{margin-left:230px;flex:1;display:flex;flex-direction:column}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.mob-btn{display:flex!important}}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.sb-logo-txt{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--purple2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sb-logo-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.sb-nav{flex:1;padding:10px 8px;overflow-y:auto}
+.sb-sec{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:14px 10px 5px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;transition:all .2s;margin-bottom:2px}
+.sb-item:hover{background:rgba(124,58,237,0.15);color:var(--text)}
+.sb-item.active{background:rgba(124,58,237,0.2);color:var(--purple2)}
+.sb-item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sb-footer{padding:12px;border-top:1px solid var(--border)}
+.topbar{background:rgba(7,9,26,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:11px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-size:15px;font-weight:600}
+.mob-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;padding:4px}
+.mob-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2}
+.content{padding:18px;flex:1}
+.sec{display:none}.sec.active{display:block}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.stat-num{font-size:24px;font-weight:700}
+.stat-num.purple{color:var(--purple2)}.stat-num.gold{color:var(--gold)}.stat-num.green{color:var(--success)}.stat-num.red{color:var(--danger)}.stat-num.blue{color:var(--info)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 11px;background:rgba(255,255,255,0.03);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border2)}
+td{padding:9px 11px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:var(--purple);color:#fff}.btn-primary:hover{background:var(--purple2)}
+.btn-danger{background:var(--danger);color:#fff}.btn-success{background:var(--success);color:#fff}
+.btn-gold{background:var(--gold);color:#111}.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--purple2);color:var(--purple2)}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}.btn-xs{padding:3px 7px;font-size:11px;border-radius:5px}
+.btn-block{width:100%;justify-content:center}
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(16,185,129,0.15);color:var(--success)}.badge-red{background:rgba(239,68,68,0.15);color:var(--danger)}
+.badge-purple{background:rgba(124,58,237,0.15);color:var(--purple2)}.badge-gold{background:rgba(245,158,11,0.15);color:var(--gold)}
+.badge-blue{background:rgba(59,130,246,0.15);color:var(--info)}.badge-gray{background:rgba(255,255,255,0.08);color:var(--text2)}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:4px;display:block;font-weight:500}
+.form-input,.form-select{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus,.form-select:focus{border-color:var(--purple2)}
+.form-input::placeholder{color:var(--text3)}
+.form-select option{background:#111}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px}
+.modal-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:30px;width:100%;max-width:360px}
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.search-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:8px 11px 8px 32px;font-size:13px;color:var(--text);outline:none}
+.search-input:focus{border-color:var(--purple2)}
+.search-input::placeholder{color:var(--text3)}
+.toast{position:fixed;top:14px;right:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;z-index:999;opacity:0;transition:all .3s;pointer-events:none;backdrop-filter:blur(10px)}
+.toast.show{opacity:1}
+.live-dot{width:7px;height:7px;background:var(--success);border-radius:50%;animation:pulse 1.5s infinite;display:inline-block;margin-right:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.pmt-card{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:14px;margin-bottom:10px}
+.pmt-card.pending{border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05)}
+.pmt-card.rejected{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05)}
+.log-entry{padding:9px 0;border-bottom:1px solid var(--border2);display:flex;gap:10px;align-items:flex-start}
+.log-dot{width:7px;height:7px;background:var(--purple2);border-radius:50%;margin-top:5px;flex-shrink:0}
+.prog-bar{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:5px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:3px}
+.empty{text-align:center;padding:28px;color:var(--text3);font-size:13px}
+.spinner{width:30px;height:30px;border:2px solid var(--border);border-top-color:var(--purple2);border-radius:50%;animation:spin 1s linear infinite;margin:22px auto;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.text-muted{color:var(--text2)}.text-xs{font-size:11px}.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-8{gap:8px}.gap-10{gap:10px}.w-full{width:100%}
+.coin-edit{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div style="font-size:32px;text-align:center;margin-bottom:6px">🔐</div>
+      <div style="font-size:19px;font-weight:800;text-align:center;margin-bottom:4px;background:linear-gradient(135deg,var(--purple2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent">Admin Dashboard</div>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:22px">Lucky Ticket — Secure Admin Access</div>
+      <div class="form-group"><label class="form-label">Admin Email</label><input class="form-input" id="adminEmail" type="email" placeholder="admin@example.com"></div>
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="adminPass" type="password" placeholder="Password"><div style="font-size:11px;color:var(--danger);margin-top:3px" id="loginErr"></div></div>
+      <button class="btn btn-primary btn-block" style="padding:11px;justify-content:center" onclick="doAdminLogin()">Sign In</button>
+      <div style="margin-top:14px;padding:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:11px;color:var(--danger)">⚠️ Sirf authorized admins access kar sakte hain.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="adminApp" style="display:none">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo"><div class="sb-logo-txt">🎫 Lucky Ticket</div><div class="sb-logo-sub">Admin Dashboard</div></div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Overview</div>
+    <div class="sb-item active" onclick="goTo('overview')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</div>
+    <div class="sb-sec">Payments</div>
+    <div class="sb-item" onclick="goTo('payments')"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Payments <span id="pendingPayBadge" style="background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;display:none">0</span></div>
+    <div class="sb-sec">Competitions</div>
+    <div class="sb-item" onclick="goTo('competitions')"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>Competitions</div>
+    <div class="sb-item" onclick="goTo('plans')"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>Plans</div>
+    <div class="sb-item" onclick="goTo('winners')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Winners</div>
+    <div class="sb-sec">Users</div>
+    <div class="sb-item" onclick="goTo('customers')"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Customers</div>
+    <div class="sb-sec">System</div>
+    <div class="sb-item" onclick="goTo('announcements')"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/></svg>Announcements</div>
+    <div class="sb-item" onclick="goTo('activitylog')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Activity Log</div>
+  </nav>
+  <div class="sb-footer">
+    <div style="font-size:11px;color:var(--text3)">Signed in as</div>
+    <div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sbEmail">—</div>
+    <button class="btn btn-outline btn-sm btn-block" style="margin-top:8px" onclick="doAdminLogout()">Sign Out</button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="flex items-center gap-10">
+      <button class="mob-btn" onclick="document.getElementById('sidebar').classList.toggle('open')"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <span class="topbar-title" id="topbarTitle">Dashboard</span>
+    </div>
+    <div class="flex items-center gap-8">
+      <span style="font-size:12px;color:var(--text2)"><span class="live-dot"></span>Live</span>
+      <span class="badge badge-purple" id="visitorBadge">👁 — online</span>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="sec active" id="sec-overview">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-num purple" id="st-users">—</div></div>
+        <div class="stat-card"><div class="stat-label">Active Today</div><div class="stat-num green" id="st-active">—</div></div>
+        <div class="stat-card"><div class="stat-label">Competitions</div><div class="stat-num blue" id="st-comps">—</div></div>
+        <div class="stat-card"><div class="stat-label">Participants</div><div class="stat-num gold" id="st-parts">—</div></div>
+        <div class="stat-card"><div class="stat-label">Winners</div><div class="stat-num gold" id="st-winners">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending Payments</div><div class="stat-num red" id="st-pending">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title"><span class="live-dot"></span>Live Competitions</div><button class="btn btn-primary btn-sm" onclick="openCreateComp()">+ New Competition</button></div>
+        <div id="liveCompsList"><div class="spinner"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏆 Recent Winners</div>
+        <div class="table-wrap"><table><thead><tr><th>Player</th><th>Plan</th><th>Score</th><th>Coins</th><th>Date</th></tr></thead><tbody id="recentWinnersTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="sec" id="sec-payments">
+      <div class="card">
+        <div class="card-title" style="color:var(--gold)">⏳ Pending Payment Verifications</div>
+        <div class="text-muted text-xs" style="margin-bottom:12px">UTR verify karo → Approve karo → Customer ko ticket milega</div>
+        <div id="pendingPaymentsList"><div class="spinner"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">✅ Verified Payments</div>
+        <div class="table-wrap"><table><thead><tr><th>Player</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Date</th></tr></thead><tbody id="verifiedPaymentsTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- COMPETITIONS -->
+    <div class="sec" id="sec-competitions">
+      <div class="card-header" style="margin-bottom:14px"><div></div><button class="btn btn-primary btn-sm" onclick="openCreateComp()">+ Create Competition</button></div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">All Competitions</div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>Plan</th><th>Prize</th><th>Entry Fee</th><th>Players</th><th>Status</th><th>Actions</th></tr></thead><tbody id="allCompsTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PLANS -->
+    <div class="sec" id="sec-plans">
+      <div class="card-header" style="margin-bottom:14px"><div></div><button class="btn btn-primary btn-sm" onclick="openPlanModal(null)">+ New Plan</button></div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Competition Plans</div>
+        <div class="table-wrap"><table><thead><tr><th>Order</th><th>Name</th><th>Entry Fee</th><th>Prize</th><th>Status</th><th>Actions</th></tr></thead><tbody id="plansTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- WINNERS -->
+    <div class="sec" id="sec-winners">
+      <div class="card">
+        <div class="card-title">Quiz Results — Pending Verification</div>
+        <div id="pendingResultsList"><div class="spinner"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Published Winners</div>
+        <div class="table-wrap"><table><thead><tr><th>Player</th><th>Plan</th><th>Score</th><th>Coins</th><th>Date</th></tr></thead><tbody id="publishedWinnersTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="sec" id="sec-customers">
+      <div class="card">
+        <div class="search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="search-input" id="custSearch" placeholder="Search by name, ID, phone…" oninput="filterCusts(this.value)"></div>
+        <div class="card-title" style="margin-bottom:12px">All Customers <span id="custCount" class="badge badge-gray"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Player ID</th><th>Name</th><th>Phone</th><th>Coins</th><th>Entries</th><th>Status</th><th>Actions</th></tr></thead><tbody id="custsTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div class="sec" id="sec-announcements">
+      <div class="card">
+        <div class="card-title">Create Announcement</div>
+        <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="annTitle" placeholder="Announcement title"></div>
+        <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="annBody" rows="3" placeholder="Message…" style="resize:vertical"></textarea></div>
+        <div class="form-group"><label class="form-label">Type</label><select class="form-select" id="annType"><option value="info">Info</option><option value="winner">Winner</option><option value="warning">Warning</option></select></div>
+        <button class="btn btn-primary" onclick="publishAnn()">📢 Publish to All Users</button>
+      </div>
+      <div class="card"><div class="card-title" style="margin-bottom:12px">Recent Announcements</div><div id="annList"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="sec" id="sec-activitylog">
+      <div class="card"><div class="card-title" style="margin-bottom:12px">Admin Activity Log</div><div id="actLogList"><div class="spinner"></div></div></div>
+    </div>
+
+  </div>
+</main>
+</div>
+</div>
+
+<!-- CREATE COMP MODAL -->
+<div class="modal-overlay" id="createCompModal">
+  <div class="modal-box">
+    <div class="modal-title">Create Competition</div>
+    <div class="form-group"><label class="form-label">Select Plan</label><select class="form-select" id="newCompPlan"></select></div>
+    <div class="form-group"><label class="form-label">Competition ID</label><input class="form-input" id="newCompId" placeholder="e.g. COMP-001"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('createCompModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doCreateComp()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="modal-overlay" id="planModal">
+  <div class="modal-box">
+    <div class="modal-title" id="planModalTitle">New Plan</div>
+    <input type="hidden" id="planEditId">
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Plan Name</label><input class="form-input" id="planName" placeholder="Plan 1"></div>
+      <div class="form-group"><label class="form-label">Order</label><input class="form-input" id="planOrder" type="number" placeholder="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Entry Fee (₹)</label><input class="form-input" id="planFee" type="number" placeholder="50"></div>
+      <div class="form-group"><label class="form-label">Prize Display</label><input class="form-input" id="planPrize" placeholder="₹200"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Prize Coins</label><input class="form-input" id="planCoins" type="number" placeholder="200"></div>
+      <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="planStatus"><option value="open">Open</option><option value="closed">Closed</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('planModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePlan()">Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER MODAL -->
+<div class="modal-overlay" id="custModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit Customer</div>
+    <input type="hidden" id="editCustId">
+    <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="editCustName"></div>
+    <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="editCustPhone"></div>
+    <div class="form-group">
+      <label class="form-label">🪙 Coins (Edit karo)</label>
+      <div class="coin-edit">
+        <input class="form-input" id="editCustCoins" type="number" placeholder="0" style="flex:1">
+        <span class="text-muted text-xs">manually set karo</span>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Account Status</label><select class="form-select" id="editCustBlocked"><option value="false">Active</option><option value="true">Blocked</option></select></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('custModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCust()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- WINNER MODAL -->
+<div class="modal-overlay" id="winnerModal">
+  <div class="modal-box">
+    <div class="modal-title">Publish Winner</div>
+    <input type="hidden" id="winnerResultId"><input type="hidden" id="winnerCompId"><input type="hidden" id="winnerUserId">
+    <div id="winnerPreview" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:14px;margin-bottom:12px"></div>
+    <div class="form-group"><label class="form-label">Prize Coins to Award</label><input class="form-input" id="winnerCoins" type="number" placeholder="200"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('winnerModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="doPublishWinner()">✅ Publish Winner</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT VERIFY MODAL -->
+<div class="modal-overlay" id="payVerifyModal">
+  <div class="modal-box">
+    <div class="modal-title">Verify Payment</div>
+    <input type="hidden" id="payDocId"><input type="hidden" id="payUserId"><input type="hidden" id="payCompId">
+    <div id="payVerifyContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="rejectPayment()">❌ Reject</button>
+      <button class="btn btn-success" onclick="approvePayment()">✅ Approve & Give Ticket</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyD6AMNbkUgBIZgRrM6z8qXlpvo_q07g7cc",
+  authDomain: "luckyticket-f6fcc.firebaseapp.com",
+  projectId: "luckyticket-f6fcc",
+  storageBucket: "luckyticket-f6fcc.firebasestorage.app",
+  messagingSenderId: "311920974005",
+  appId: "1:311920974005:web:20c28779a011135466c6fc"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const ADMIN_EMAILS = ["amankumaryt1010@gmail.com"];
+let currentAdmin = null;
+let allCusts = [];
+
+auth.onAuthStateChanged(async user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    currentAdmin = user;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('adminApp').style.display = 'block';
+    document.getElementById('sbEmail').textContent = user.email;
+    initAdmin();
+  } else if (user) {
+    await auth.signOut();
+    document.getElementById('loginErr').textContent = 'Access denied.';
+  } else {
+    document.getElementById('loginPage').style.display = 'block';
+    document.getElementById('adminApp').style.display = 'none';
+  }
+});
+
+async function doAdminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  document.getElementById('loginErr').textContent = '';
+  if (!ADMIN_EMAILS.includes(email)) { document.getElementById('loginErr').textContent = 'Access denied.'; return; }
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e) { document.getElementById('loginErr').textContent = 'Email ya password galat hai.'; }
+}
+
+async function doAdminLogout() { await logAct('Admin signed out'); await auth.signOut(); }
+
+function initAdmin() {
+  loadOverview();
+  loadLiveComps();
+  loadRecentWinners();
+  setupVisitors();
+  checkPendingPayments();
+  setTimeout(seedPlans, 2000);
+}
+
+function goTo(sec) {
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + sec)?.classList.add('active');
+  const titles = { overview:'Dashboard', payments:'Payments', competitions:'Competitions', plans:'Plans', winners:'Winners', customers:'Customers', announcements:'Announcements', activitylog:'Activity Log' };
+  document.getElementById('topbarTitle').textContent = titles[sec] || 'Dashboard';
+  if (sec === 'payments') loadPayments();
+  if (sec === 'competitions') loadAllComps();
+  if (sec === 'plans') loadPlans();
+  if (sec === 'winners') loadWinners();
+  if (sec === 'customers') loadCusts();
+  if (sec === 'announcements') loadAnns();
+  if (sec === 'activitylog') loadActLog();
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type==='error'?'var(--danger)':type==='success'?'var(--success)':'var(--border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('show'); }));
+
+// OVERVIEW
+async function loadOverview() {
+  try {
+    const s = (await db.collection('stats').doc('global').get()).data() || {};
+    document.getElementById('st-users').textContent = s.totalUsers || 0;
+    document.getElementById('st-comps').textContent = s.totalCompetitions || 0;
+    document.getElementById('st-parts').textContent = s.totalParticipants || 0;
+    document.getElementById('st-winners').textContent = s.totalWinners || 0;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const act = await db.collection('users').where('lastSeen','>=',firebase.firestore.Timestamp.fromDate(today)).get();
+    document.getElementById('st-active').textContent = act.size;
+  } catch(e) {}
+}
+
+async function checkPendingPayments() {
+  try {
+    const snap = await db.collection('payments').where('status','==','pending').get();
+    const count = snap.size;
+    document.getElementById('st-pending').textContent = count;
+    const badge = document.getElementById('pendingPayBadge');
+    if (count > 0) { badge.style.display = 'inline'; badge.textContent = count; }
+    else badge.style.display = 'none';
+  } catch(e) {}
+}
+
+// LIVE COMPS
+async function loadLiveComps() {
+  const c = document.getElementById('liveCompsList');
+  try {
+    const snap = await db.collection('competitions').orderBy('createdAt','desc').limit(8).get();
+    if (snap.empty) { c.innerHTML = '<div class="empty">Koi competition nahi. Create karo!</div>'; return; }
+    c.innerHTML = `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Plan</th><th>Fee</th><th>Players</th><th>Status</th><th>Actions</th></tr></thead><tbody>`;
+    snap.forEach(doc => {
+      const d = doc.data();
+      const pct = Math.min(100,((d.participantCount||0)/20)*100);
+      c.querySelector('tbody').innerHTML += `<tr>
+        <td><code style="font-size:11px;color:var(--purple2)">#${esc(d.compId||doc.id.substr(0,8))}</code></td>
+        <td>${esc(d.planName||'—')}</td>
+        <td style="color:var(--success)">₹${d.entryFee||0}</td>
+        <td><div style="font-weight:600">${d.participantCount||0}/20</div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div></td>
+        <td><span class="badge badge-${d.status==='open'?'green':d.status==='pending'?'gold':d.status==='completed'?'blue':'gray'}">${d.status}</span></td>
+        <td>
+          <button class="btn btn-outline btn-xs" onclick="viewComp('${doc.id}')">View</button>
+          ${d.status==='open'?`<button class="btn btn-danger btn-xs" onclick="toggleStatus('${doc.id}','${d.status}')">Close</button>`:''}
+          ${d.status==='pending'?`<button class="btn btn-success btn-xs" onclick="startQuizRound('${doc.id}')">Start Quiz</button>`:''}
+        </td>
+      </tr>`;
+    });
+    c.innerHTML += '</tbody></table></div>';
+  } catch(e) { c.innerHTML = '<div class="empty">Load nahi ho saka.</div>'; }
+}
+
+async function toggleStatus(id, cur) {
+  const ns = cur==='open'?'closed':'open';
+  await db.collection('competitions').doc(id).update({ status: ns });
+  await logAct(`Competition ${id.substr(0,8)} status changed to ${ns}`);
+  showToast(`Status: ${ns}`, 'success');
+  loadLiveComps(); loadAllComps();
+}
+
+async function startQuizRound(id) {
+  await db.collection('competitions').doc(id).update({ status: 'pending' });
+  await logAct(`Quiz round started for ${id.substr(0,8)}`);
+  showToast('Quiz round shuru! Players ab quiz de sakte hain.', 'success');
+  loadLiveComps();
+}
+
+async function viewComp(id) {
+  const doc = await db.collection('competitions').doc(id).get();
+  const d = doc.data();
+  alert(`Competition: #${d.compId||id.substr(0,8)}\nPlan: ${d.planName}\nPrize: ${d.prizeDisplay}\nEntry Fee: ₹${d.entryFee||0}\nPlayers: ${d.participantCount||0}/20\nStatus: ${d.status}\nWinner: ${d.winnerName||'TBD'}`);
+}
+
+// PAYMENTS
+async function loadPayments() {
+  await loadPendingPayments();
+  await loadVerifiedPayments();
+}
+
+async function loadPendingPayments() {
+  const container = document.getElementById('pendingPaymentsList');
+  try {
+    const snap = await db.collection('payments').where('status','==','pending').orderBy('submittedAt','desc').get();
+    if (snap.empty) { container.innerHTML = '<div class="empty">Koi pending payment nahi. ✅</div>'; return; }
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const p = doc.data();
+      container.innerHTML += `<div class="pmt-card pending">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>
+            <div style="font-weight:700;font-size:14px">${esc(p.userName)}</div>
+            <div class="text-xs text-muted">📱 ${esc(p.userPhone)}</div>
+            <div class="text-xs" style="color:var(--success);margin-top:3px">Plan: ${esc(p.planName)} | ₹${p.amount}</div>
+            <div class="text-xs text-muted">UTR: <strong style="color:var(--gold)">${esc(p.utr)}</strong></div>
+            <div class="text-xs text-muted">App: ${esc(p.upiApp)} | ${formatDate(p.submittedAt)}</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openPayVerify('${doc.id}')">Verify</button>
+        </div>
+      </div>`;
+    });
+  } catch(e) { container.innerHTML = '<div class="empty">Load nahi ho saka.</div>'; }
+}
+
+async function loadVerifiedPayments() {
+  const tbody = document.getElementById('verifiedPaymentsTable');
+  try {
+    const snap = await db.collection('payments').where('status','in',['approved','rejected']).orderBy('submittedAt','desc').limit(20).get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Koi verified payment nahi.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const p = doc.data();
+      tbody.innerHTML += `<tr>
+        <td style="font-weight:600">${esc(p.userName)}</td>
+        <td>${esc(p.planName)}</td>
+        <td style="color:var(--success)">₹${p.amount}</td>
+        <td style="font-family:monospace;color:var(--gold)">${esc(p.utr)}</td>
+        <td><span class="badge badge-${p.status==='approved'?'green':'red'}">${p.status}</span></td>
+        <td class="text-xs">${formatDate(p.submittedAt)}</td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+function openPayVerify(docId) {
+  db.collection('payments').doc(docId).get().then(doc => {
+    const p = doc.data();
+    document.getElementById('payDocId').value = docId;
+    document.getElementById('payUserId').value = p.userId;
+    document.getElementById('payCompId').value = p.competitionId;
+    document.getElementById('payVerifyContent').innerHTML = `
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:16px;font-weight:700">${esc(p.userName)}</div>
+        <div class="text-xs text-muted">📱 ${esc(p.userPhone)}</div>
+        <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div class="text-xs text-muted">Plan</div><div style="font-weight:600">${esc(p.planName)}</div></div>
+          <div><div class="text-xs text-muted">Amount</div><div style="font-weight:600;color:var(--success)">₹${p.amount}</div></div>
+          <div><div class="text-xs text-muted">UTR Number</div><div style="font-weight:700;color:var(--gold);font-family:monospace">${esc(p.utr)}</div></div>
+          <div><div class="text-xs text-muted">UPI App</div><div>${esc(p.upiApp)}</div></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text2)">⚠️ PhonePe/GPay mein UTR verify karo phir Approve ya Reject karo.</div>`;
+    openModal('payVerifyModal');
+  });
+}
+
+async function approvePayment() {
+  const docId = document.getElementById('payDocId').value;
+  const userId = document.getElementById('payUserId').value;
+  const compId = document.getElementById('payCompId').value;
+  try {
+    const payDoc = await db.collection('payments').doc(docId).get();
+    const p = payDoc.data();
+    const compDoc = await db.collection('competitions').doc(compId).get();
+    if (!compDoc.exists) { showToast('Competition nahi mili!', 'error'); return; }
+    const comp = compDoc.data();
+    if ((comp.participantCount||0) >= 20) { showToast('Competition full ho gayi!', 'error'); return; }
+
+    // Generate unique ticket
+    let ticket;
+    let unique = false;
+    while (!unique) {
+      ticket = String(Math.floor(100000 + Math.random() * 900000));
+      if (!(comp.usedTickets||[]).includes(ticket)) unique = true;
+    }
+
+    const newCount = (comp.participantCount||0) + 1;
+    const updateData = {
+      participantCount: firebase.firestore.FieldValue.increment(1),
+      participantIds: firebase.firestore.FieldValue.arrayUnion(userId),
+      usedTickets: firebase.firestore.FieldValue.arrayUnion(ticket),
+      [`participantTickets.${userId}`]: ticket
+    };
+    if (newCount >= 20) updateData.status = 'pending';
+
+    await db.collection('competitions').doc(compId).update(updateData);
+
+    // Add ticket
+    await db.collection('tickets').add({
+      userId, competitionId: compId,
+      ticketNumber: ticket,
+      planName: comp.planName,
+      prizeDisplay: comp.prizeDisplay,
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'active', won: false
+    });
+
+    // Update payment
+    await db.collection('payments').doc(docId).update({ status: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+    // Update user
+    await db.collection('users').doc(userId).update({ totalEntries: firebase.firestore.FieldValue.increment(1) });
+
+    // Global stats
+    await db.collection('stats').doc('global').set({ totalParticipants: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+
+    // Notify user
+    await db.collection('notifications').add({
+      userId,
+      title: `🎫 Ticket Mila! #${ticket}`,
+      body: `Payment verify ho gayi. ${comp.planName} mein aapka ticket number hai: ${ticket}`,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false
+    });
+
+    await logAct(`Payment approved for user ${userId.substr(0,8)} — Ticket ${ticket}`);
+    showToast(`✅ Approved! Ticket ${ticket} diya gaya.`, 'success');
+    closeModal('payVerifyModal');
+    loadPayments();
+    checkPendingPayments();
+    loadOverview();
+    loadLiveComps();
+  } catch(e) { console.error(e); showToast('Error! Dobara try karo.', 'error'); }
+}
+
+async function rejectPayment() {
+  const docId = document.getElementById('payDocId').value;
+  const userId = document.getElementById('payUserId').value;
+  if (!confirm('Payment reject karna chahte ho?')) return;
+  await db.collection('payments').doc(docId).update({ status: 'rejected', rejectedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  await db.collection('notifications').add({
+    userId,
+    title: '❌ Payment Rejected',
+    body: 'Aapki payment verify nahi ho saki. Support se contact karo: shopindia4748396@gmail.com',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    read: false
+  });
+  await logAct(`Payment rejected for user ${userId.substr(0,8)}`);
+  showToast('Payment rejected.', 'success');
+  closeModal('payVerifyModal');
+  loadPayments();
+  checkPendingPayments();
+}
+
+// ALL COMPS
+async function loadAllComps() {
+  const tbody = document.getElementById('allCompsTable');
+  try {
+    const snap = await db.collection('competitions').orderBy('createdAt','desc').get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Koi competition nahi.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      tbody.innerHTML += `<tr>
+        <td><code style="font-size:11px;color:var(--purple2)">#${esc(d.compId||doc.id.substr(0,8))}</code></td>
+        <td>${esc(d.planName||'—')}</td>
+        <td style="color:var(--gold)">${esc(d.prizeDisplay||'—')}</td>
+        <td style="color:var(--success)">₹${d.entryFee||0}</td>
+        <td>${d.participantCount||0}/20</td>
+        <td><span class="badge badge-${d.status==='open'?'green':d.status==='pending'?'gold':d.status==='completed'?'blue':'gray'}">${d.status}</span></td>
+        <td><button class="btn btn-danger btn-xs" onclick="deleteComp('${doc.id}')">Delete</button></td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+async function deleteComp(id) {
+  if (!confirm('Delete this competition?')) return;
+  await db.collection('competitions').doc(id).delete();
+  await logAct(`Deleted competition ${id.substr(0,8)}`);
+  showToast('Deleted!', 'success');
+  loadAllComps(); loadLiveComps();
+}
+
+// CREATE COMP
+async function openCreateComp() {
+  const snap = await db.collection('plans').orderBy('order').get();
+  const sel = document.getElementById('newCompPlan');
+  sel.innerHTML = '';
+  snap.forEach(doc => {
+    const p = doc.data();
+    sel.innerHTML += `<option value="${doc.id}" data-name="${esc(p.name)}" data-prize="${esc(p.prizeDisplay)}" data-fee="${p.entryFee||0}" data-coins="${p.prizeCoins||0}">${esc(p.name)} — ${esc(p.prizeDisplay)} (Entry: ₹${p.entryFee||0})</option>`;
+  });
+  document.getElementById('newCompId').value = 'COMP-' + String(Date.now()).substr(-4);
+  openModal('createCompModal');
+}
+
+async function doCreateComp() {
+  const sel = document.getElementById('newCompPlan');
+  const opt = sel.options[sel.selectedIndex];
+  const planId = sel.value;
+  const compId = document.getElementById('newCompId').value.trim();
+  if (!planId || !compId) { showToast('Sab fields bharein.', 'error'); return; }
+  await db.collection('competitions').add({
+    planId, planName: opt.dataset.name,
+    prizeDisplay: opt.dataset.prize,
+    entryFee: parseFloat(opt.dataset.fee)||0,
+    prizeCoins: parseInt(opt.dataset.coins)||0,
+    compId, status:'open',
+    participantCount:0, participantIds:[], usedTickets:[], participantTickets:{},
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdBy: currentAdmin.email
+  });
+  await db.collection('stats').doc('global').set({ totalCompetitions: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+  await logAct(`Created competition ${compId}`);
+  showToast('Competition create ho gayi!', 'success');
+  closeModal('createCompModal');
+  loadLiveComps(); loadAllComps(); loadOverview();
+}
+
+// PLANS
+async function loadPlans() {
+  const tbody = document.getElementById('plansTable');
+  try {
+    const snap = await db.collection('plans').orderBy('order').get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="6" class="empty">Koi plan nahi. "+ New Plan" se banao.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const p = doc.data();
+      tbody.innerHTML += `<tr>
+        <td>${p.order||'—'}</td>
+        <td style="font-weight:600">${esc(p.name)}</td>
+        <td style="color:var(--success)">₹${p.entryFee||0}</td>
+        <td style="color:var(--gold)">${esc(p.prizeDisplay)}</td>
+        <td><span class="badge badge-${p.status==='open'?'green':'red'}">${p.status}</span></td>
+        <td>
+          <button class="btn btn-outline btn-xs" onclick="openPlanModal('${doc.id}')">Edit</button>
+          <button class="btn btn-danger btn-xs" onclick="deletePlan('${doc.id}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+  } catch(e) {}
+}
+
+function openPlanModal(id) {
+  document.getElementById('planEditId').value = id||'';
+  document.getElementById('planModalTitle').textContent = id?'Edit Plan':'New Plan';
+  if (!id) { ['planName','planPrize','planOrder','planFee','planCoins'].forEach(f => document.getElementById(f).value=''); document.getElementById('planStatus').value='open'; }
+  else {
+    db.collection('plans').doc(id).get().then(doc => {
+      const p = doc.data();
+      document.getElementById('planName').value = p.name||'';
+      document.getElementById('planPrize').value = p.prizeDisplay||'';
+      document.getElementById('planOrder').value = p.order||'';
+      document.getElementById('planFee').value = p.entryFee||'';
+      document.getElementById('planCoins').value = p.prizeCoins||'';
+      document.getElementById('planStatus').value = p.status||'open';
+    });
+  }
+  openModal('planModal');
+}
+
+async function savePlan() {
+  const id = document.getElementById('planEditId').value;
+  const data = {
+    name: document.getElementById('planName').value.trim(),
+    prizeDisplay: document.getElementById('planPrize').value.trim(),
+    entryFee: parseFloat(document.getElementById('planFee').value)||0,
+    order: parseInt(document.getElementById('planOrder').value)||0,
+    prizeCoins: parseInt(document.getElementById('planCoins').value)||0,
+    status: document.getElementById('planStatus').value
+  };
+  if (!data.name||!data.prizeDisplay) { showToast('Name aur prize bharein.', 'error'); return; }
+  if (id) { await db.collection('plans').doc(id).update(data); await logAct(`Updated plan ${data.name}`); }
+  else { await db.collection('plans').add(data); await logAct(`Created plan ${data.name}`); }
+  showToast('Plan save ho gaya!', 'success');
+  closeModal('planModal'); loadPlans();
+}
+
+async function deletePlan(id) {
+  if (!confirm('Delete this plan?')) return;
+  await db.collection('plans').doc(id).delete();
+  await logAct('Deleted a plan');
+  showToast('Plan deleted!', 'success'); loadPlans();
+}
+
+// WINNERS
+async function loadWinners() {
+  await loadPendingResults();
+  await loadPublishedWinners();
+}
+
+async function loadPendingResults() {
+  const c = document.getElementById('pendingResultsList');
+  try {
+    const snap = await db.collection('quizResults').orderBy('submittedAt','desc').limit(30).get();
+    const pending = [];
+    snap.forEach(doc => { const d=doc.data(); if(!d.published) pending.push({id:doc.id,...d}); });
+    if (!pending.length) { c.innerHTML = '<div class="empty">Koi pending result nahi.</div>'; return; }
+    c.innerHTML = '';
+    pending.forEach(r => {
+      c.innerHTML += `<div class="pmt-card pending" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-weight:700">${esc(r.userName)}</div>
+            <div class="text-xs text-muted">Competition: ${esc(r.competitionId||'—')}</div>
+            <div class="text-xs" style="color:var(--gold)">Score: ${r.score}/${r.total} (${r.percentage||Math.round((r.score/r.total)*100)}%)</div>
+            <div class="text-xs text-muted">${formatDate(r.submittedAt)}</div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="openWinnerModal('${r.id}','${r.competitionId}','${esc(r.userName)}','${r.userId}',${r.score},${r.total})">Publish Winner</button>
+        </div>
+      </div>`;
+    });
+  } catch(e) { c.innerHTML = '<div class="empty">Load nahi ho saka.</div>'; }
+}
+
+async function loadPublishedWinners() {
+  const tbody = document.getElementById('publishedWinnersTable');
+  try {
+    const snap = await db.collection('competitions').where('status','==','completed').where('winnerId','!=',null).orderBy('winnerId').orderBy('completedAt','desc').limit(20).get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Koi winner publish nahi hua.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      tbody.innerHTML += `<tr><td style="font-weight:600">${esc(d.winnerName||'—')}</td><td>${esc(d.planName||'—')}</td><td>${d.winnerScore||'—'}</td><td style="color:var(--gold)">🪙 ${d.prizeCoins||0}</td><td class="text-xs">${formatDate(d.completedAt)}</td></tr>`;
+    });
+  } catch(e) {}
+}
+
+async function loadRecentWinners() {
+  const tbody = document.getElementById('recentWinnersTable');
+  try {
+    const snap = await db.collection('competitions').where('status','==','completed').where('winnerId','!=',null).orderBy('winnerId').orderBy('completedAt','desc').limit(5).get();
+    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="5" class="empty">Koi winner nahi abhi tak.</td></tr>'; return; }
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      tbody.innerHTML += `<tr><td style="font-weight:600">${esc(d.winnerName||'—')}</td><td>${esc(d.planName||'—')}</td><td>${d.winnerScore||'—'}</td><td style="color:var(--gold)">🪙 ${d.prizeCoins||0}</td><td class="text-xs">${formatDate(d.completedAt)}</td></tr>`;
+    });
+  } catch(e) {}
+}
+
+function openWinnerModal(resultId, compId, userName, userId, score, total) {
+  document.getElementById('winnerResultId').value = resultId;
+  document.getElementById('winnerCompId').value = compId;
+  document.getElementById('winnerUserId').value = userId;
+  document.getElementById('winnerPreview').innerHTML = `<div style="font-size:17px;font-weight:700">🏆 ${esc(userName)}</div><div class="text-xs text-muted mt-8">Score: ${score}/${total} (${Math.round(score/total*100)}%)</div><div class="text-xs text-muted">Competition: ${esc(compId)}</div>`;
+  document.getElementById('winnerCoins').value = '';
+  openModal('winnerModal');
+}
+
+async function doPublishWinner() {
+  const resultId = document.getElementById('winnerResultId').value;
+  const compId = document.getElementById('winnerCompId').value;
+  const userId = document.getElementById('winnerUserId').value;
+  const coins = parseInt(document.getElementById('winnerCoins').value);
+  if (!coins||coins<1) { showToast('Coins daalo.', 'error'); return; }
+  try {
+    const rDoc = await db.collection('quizResults').doc(resultId).get();
+    const r = rDoc.data();
+    await db.collection('quizResults').doc(resultId).update({ verified:true, published:true });
+    await db.collection('competitions').doc(compId).update({
+      winnerId: r.userId, winnerName: r.userName,
+      winnerScore: `${r.score}/${r.total}`,
+      prizeCoins: coins, status:'completed',
+      completedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('users').doc(r.userId).update({ coins: firebase.firestore.FieldValue.increment(coins), totalWins: firebase.firestore.FieldValue.increment(1) });
+    const tickets = await db.collection('tickets').where('userId','==',r.userId).where('competitionId','==',compId).get();
+    tickets.forEach(t => t.ref.update({ won: true }));
+    await db.collection('notifications').add({ userId: r.userId, title:`🏆 Aap jeete! ${coins} Coins`, body:`Badhai ho! ${compId} competition jeeta!`, createdAt: firebase.firestore.FieldValue.serverTimestamp(), read: false });
+    await db.collection('stats').doc('global').set({ totalWinners: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    await logAct(`Published winner ${r.userName} — ${coins} coins`);
+    showToast('Winner publish ho gaya! 🏆', 'success');
+    closeModal('winnerModal');
+    loadWinners(); loadRecentWinners(); loadOverview();
+  } catch(e) { console.error(e); showToast('Error!', 'error'); }
+}
+
+// CUSTOMERS
+async function loadCusts() {
+  const tbody = document.getElementById('custsTable');
+  try {
+    const snap = await db.collection('users').orderBy('createdAt','desc').get();
+    allCusts = [];
+    snap.forEach(doc => allCusts.push({id:doc.id,...doc.data()}));
+    document.getElementById('custCount').textContent = allCusts.length;
+    renderCusts(allCusts);
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Load nahi ho saka.</td></tr>'; }
+}
+
+function renderCusts(list) {
+  const tbody = document.getElementById('custsTable');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">Koi customer nahi mila.</td></tr>'; return; }
+  tbody.innerHTML = '';
+  list.forEach(c => {
+    tbody.innerHTML += `<tr>
+      <td><code style="font-size:11px;color:var(--purple2)">${esc(c.playerId||'—')}</code></td>
+      <td style="font-weight:600">${esc(c.name||'—')}</td>
+      <td class="text-xs">${esc(c.phone||'—')}</td>
+      <td style="color:var(--gold);font-weight:600">🪙 ${c.coins||0}</td>
+      <td>${c.totalEntries||0}</td>
+      <td><span class="badge badge-${c.blocked?'red':'green'}">${c.blocked?'Blocked':'Active'}</span></td>
+      <td>
+        <button class="btn btn-outline btn-xs" onclick="openCustModal('${c.id}')">Edit</button>
+        <button class="btn btn-${c.blocked?'success':'danger'} btn-xs" onclick="toggleBlock('${c.id}',${c.blocked})">${c.blocked?'Unblock':'Block'}</button>
+      </td>
+    </tr>`;
+  });
+}
+
+function filterCusts(q) {
+  const f = q.toLowerCase();
+  renderCusts(allCusts.filter(c => (c.name||'').toLowerCase().includes(f)||(c.playerId||'').toLowerCase().includes(f)||(c.phone||'').includes(f)));
+}
+
+function openCustModal(uid) {
+  const c = allCusts.find(x => x.id===uid);
+  if (!c) return;
+  document.getElementById('editCustId').value = uid;
+  document.getElementById('editCustName').value = c.name||'';
+  document.getElementById('editCustPhone').value = c.phone||'';
+  document.getElementById('editCustCoins').value = c.coins||0;
+  document.getElementById('editCustBlocked').value = String(c.blocked||false);
+  openModal('custModal');
+}
+
+async function saveCust() {
+  const uid = document.getElementById('editCustId').value;
+  const data = {
+    name: document.getElementById('editCustName').value.trim(),
+    phone: document.getElementById('editCustPhone').value.trim(),
+    coins: parseInt(document.getElementById('editCustCoins').value)||0,
+    blocked: document.getElementById('editCustBlocked').value==='true'
+  };
+  await db.collection('users').doc(uid).update(data);
+  await logAct(`Edited customer ${uid.substr(0,8)} — coins set to ${data.coins}`);
+  showToast('Customer updated!', 'success');
+  closeModal('custModal'); loadCusts();
+}
+
+async function toggleBlock(uid, cur) {
+  const ns = !cur;
+  await db.collection('users').doc(uid).update({ blocked: ns });
+  await logAct(`${ns?'Blocked':'Unblocked'} user ${uid.substr(0,8)}`);
+  showToast(`Account ${ns?'blocked':'unblocked'}.`, 'success');
+  loadCusts();
+}
+
+// ANNOUNCEMENTS
+async function publishAnn() {
+  const title = document.getElementById('annTitle').value.trim();
+  const body = document.getElementById('annBody').value.trim();
+  const type = document.getElementById('annType').value;
+  if (!title||!body) { showToast('Title aur message bharein.', 'error'); return; }
+  await db.collection('announcements').add({ title, body, type, publishedAt: firebase.firestore.FieldValue.serverTimestamp(), publishedBy: currentAdmin.email });
+  const usersSnap = await db.collection('users').get();
+  const batch = db.batch();
+  usersSnap.forEach(doc => { const ref = db.collection('notifications').doc(); batch.set(ref, { userId:doc.id, title, body, type, createdAt:firebase.firestore.FieldValue.serverTimestamp(), read:false }); });
+  await batch.commit();
+  await logAct(`Published announcement: ${title}`);
+  showToast('Announcement publish ho gaya!', 'success');
+  document.getElementById('annTitle').value=''; document.getElementById('annBody').value='';
+  loadAnns();
+}
+
+async function loadAnns() {
+  const c = document.getElementById('annList');
+  try {
+    const snap = await db.collection('announcements').orderBy('publishedAt','desc').limit(10).get();
+    if (snap.empty) { c.innerHTML = '<div class="empty">Koi announcement nahi.</div>'; return; }
+    c.innerHTML = '';
+    snap.forEach(doc => {
+      const a = doc.data();
+      c.innerHTML += `<div class="pmt-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:600">${esc(a.title)}</div><div class="text-xs text-muted">${esc(a.body)}</div></div><span class="badge badge-${a.type==='winner'?'gold':a.type==='warning'?'red':'blue'}">${a.type}</span></div><div class="text-xs text-muted" style="margin-top:4px">${formatDate(a.publishedAt)}</div></div>`;
+    });
+  } catch(e) {}
+}
+
+// ACTIVITY LOG
+async function loadActLog() {
+  const c = document.getElementById('actLogList');
+  try {
+    const snap = await db.collection('adminLog').orderBy('timestamp','desc').limit(50).get();
+    if (snap.empty) { c.innerHTML = '<div class="empty">Koi activity nahi.</div>'; return; }
+    c.innerHTML = '';
+    snap.forEach(doc => {
+      const l = doc.data();
+      c.innerHTML += `<div class="log-entry"><div class="log-dot"></div><div><div style="font-size:13px">${esc(l.action)}</div><div class="text-xs text-muted">${esc(l.admin)} · ${formatDate(l.timestamp)}</div></div></div>`;
+    });
+  } catch(e) {}
+}
+
+async function logAct(action) {
+  try { await db.collection('adminLog').add({ action, admin: currentAdmin?.email||'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() }); } catch(e) {}
+}
+
+// VISITORS
+function setupVisitors() {
+  db.collection('stats').doc('global').set({ activeNow: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+  window.addEventListener('beforeunload', () => db.collection('stats').doc('global').set({ activeNow: firebase.firestore.FieldValue.increment(-1) }, { merge: true }));
+  db.collection('stats').doc('global').onSnapshot(snap => {
+    const v = Math.max(0, (snap.data()||{}).activeNow||0);
+    document.getElementById('visitorBadge').textContent = `👁 ${v} online`;
+  });
+}
+
+// SEED DEFAULT PLANS
+async function seedPlans() {
+  const existing = await db.collection('plans').get();
+  if (!existing.empty) return;
+  const plans = [
+    { name:'Plan 1', prizeDisplay:'₹200', entryFee:20, prizeCoins:200, order:1, status:'open' },
+    { name:'Plan 2', prizeDisplay:'₹500', entryFee:50, prizeCoins:500, order:2, status:'open' },
+    { name:'Plan 3', prizeDisplay:'₹700', entryFee:70, prizeCoins:700, order:3, status:'open' },
+    { name:'Plan 4', prizeDisplay:'₹1,300', entryFee:130, prizeCoins:1300, order:4, status:'open' },
+    { name:'Plan 5', prizeDisplay:'₹3,500', entryFee:350, prizeCoins:3500, order:5, status:'open', featured:true },
+    { name:'Plan 6', prizeDisplay:'₹7,500', entryFee:750, prizeCoins:7500, order:6, status:'open' },
+    { name:'Plan 7', prizeDisplay:'₹15,000', entryFee:1500, prizeCoins:15000, order:7, status:'open' }
+  ];
+  const batch = db.batch();
+  plans.forEach(p => batch.set(db.collection('plans').doc(), p));
+  await batch.commit();
+  await logAct('Default plans created');
+  showToast('7 default plans create ho gaye!', 'success');
+  loadPlans();
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function formatDate(ts) { if(!ts) return '—'; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+</script>
+</body>
+</html>
